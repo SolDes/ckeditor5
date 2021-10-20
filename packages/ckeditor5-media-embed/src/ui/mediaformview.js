@@ -279,7 +279,7 @@ export default class MediaFormView extends View {
 		const labeledInput = new LabeledFieldView( this.locale, createLabeledInputText );
 		const inputField = labeledInput.fieldView;
 
-		this._urlInputViewInfoDefault = t( 'Paste the media URL in the input.' );
+		this._urlInputViewInfoDefault = t( 'Paste the Salesforce Vidyard URL in the input.' );
 		this._urlInputViewInfoTip = t( 'Tip: Paste the URL into the content to embed faster.' );
 
 		labeledInput.label = t( 'Media URL' );
