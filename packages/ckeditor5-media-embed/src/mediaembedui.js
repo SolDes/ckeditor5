@@ -131,7 +131,7 @@ function getFormValidators( t, registry ) {
 		},
 		form => {
 			if ( !registry.hasMedia( form.url ) ) {
-				return t( 'This media URL is not supported.' );
+				return t( 'Only Salesforce Vidyard URLs are supported.' );
 			}
 		}
 	];
