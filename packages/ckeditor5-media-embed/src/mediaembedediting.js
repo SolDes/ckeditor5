@@ -8,6 +8,7 @@
  */
 
 import { Plugin } from 'ckeditor5/src/core';
+import { first } from 'ckeditor5/src/utils';
 
 import { modelToViewUrlAttributeConverter } from './converters';
 import MediaEmbedCommand from './mediaembedcommand';
@@ -35,121 +36,23 @@ export default class MediaEmbedEditing extends Plugin {
 	constructor( editor ) {
 		super( editor );
 
-		editor.config.define( 'mediaEmbed', {
-			elementName: 'oembed',
+		editor.config.define('mediaEmbed', {
 			providers: [
 				{
-					name: 'dailymotion',
-					url: /^dailymotion\.com\/video\/(\w+)/,
+					name: 'sfvidyard',
+					url: /^salesforce\.vidyard\.com\/watch\/([\w-]+)/,
 					html: match => {
-						const id = match[ 1 ];
+						const id = match[1];
 
 						return (
-							'<div style="position: relative; padding-bottom: 100%; height: 0; ">' +
-								`<iframe src="https://www.dailymotion.com/embed/video/${ id }" ` +
-									'style="position: absolute; width: 100%; height: 100%; top: 0; left: 0;" ' +
-									'frameborder="0" width="480" height="270" allowfullscreen allow="autoplay">' +
-								'</iframe>' +
+							'<div class="vidyard_iframe_container">' +
+								`<iframe class="vidyard_iframe" src="//play.vidyard.com/${id}.html?v=3.1.1" width="640" height="360" scrolling="no" frameborder="0" allowtransparency="true" allowfullscreen></iframe>` +
 							'</div>'
 						);
 					}
 				},
-
-				{
-					name: 'spotify',
-					url: [
-						/^open\.spotify\.com\/(artist\/\w+)/,
-						/^open\.spotify\.com\/(album\/\w+)/,
-						/^open\.spotify\.com\/(track\/\w+)/
-					],
-					html: match => {
-						const id = match[ 1 ];
-
-						return (
-							'<div style="position: relative; padding-bottom: 100%; height: 0; padding-bottom: 126%;">' +
-								`<iframe src="https://open.spotify.com/embed/${ id }" ` +
-									'style="position: absolute; width: 100%; height: 100%; top: 0; left: 0;" ' +
-									'frameborder="0" allowtransparency="true" allow="encrypted-media">' +
-								'</iframe>' +
-							'</div>'
-						);
-					}
-				},
-
-				{
-					name: 'youtube',
-					url: [
-						/^(?:m\.)?youtube\.com\/watch\?v=([\w-]+)/,
-						/^(?:m\.)?youtube\.com\/v\/([\w-]+)/,
-						/^youtube\.com\/embed\/([\w-]+)/,
-						/^youtu\.be\/([\w-]+)/
-					],
-					html: match => {
-						const id = match[ 1 ];
-
-						return (
-							'<div style="position: relative; padding-bottom: 100%; height: 0; padding-bottom: 56.2493%;">' +
-								`<iframe src="https://www.youtube.com/embed/${ id }" ` +
-									'style="position: absolute; width: 100%; height: 100%; top: 0; left: 0;" ' +
-									'frameborder="0" allow="autoplay; encrypted-media" allowfullscreen>' +
-								'</iframe>' +
-							'</div>'
-						);
-					}
-				},
-
-				{
-					name: 'vimeo',
-					url: [
-						/^vimeo\.com\/(\d+)/,
-						/^vimeo\.com\/[^/]+\/[^/]+\/video\/(\d+)/,
-						/^vimeo\.com\/album\/[^/]+\/video\/(\d+)/,
-						/^vimeo\.com\/channels\/[^/]+\/(\d+)/,
-						/^vimeo\.com\/groups\/[^/]+\/videos\/(\d+)/,
-						/^vimeo\.com\/ondemand\/[^/]+\/(\d+)/,
-						/^player\.vimeo\.com\/video\/(\d+)/
-					],
-					html: match => {
-						const id = match[ 1 ];
-
-						return (
-							'<div style="position: relative; padding-bottom: 100%; height: 0; padding-bottom: 56.2493%;">' +
-								`<iframe src="https://player.vimeo.com/video/${ id }" ` +
-									'style="position: absolute; width: 100%; height: 100%; top: 0; left: 0;" ' +
-									'frameborder="0" webkitallowfullscreen mozallowfullscreen allowfullscreen>' +
-								'</iframe>' +
-							'</div>'
-						);
-					}
-				},
-
-				{
-					name: 'instagram',
-					url: /^instagram\.com\/p\/(\w+)/
-				},
-				{
-					name: 'twitter',
-					url: /^twitter\.com/
-				},
-				{
-					name: 'googleMaps',
-					url: [
-						/^google\.com\/maps/,
-						/^goo\.gl\/maps/,
-						/^maps\.google\.com/,
-						/^maps\.app\.goo\.gl/
-					]
-				},
-				{
-					name: 'flickr',
-					url: /^flickr\.com/
-				},
-				{
-					name: 'facebook',
-					url: /^facebook\.com/
-				}
 			]
-		} );
+		});
 
 		/**
 		 * The media registry managing the media providers in the editor.
@@ -252,6 +155,29 @@ export default class MediaEmbedEditing extends Plugin {
 					if ( registry.hasMedia( url ) ) {
 						return writer.createElement( 'media', { url } );
 					}
+				}
+			} )
+			// Consume `<figure class="media">` elements, that were left after upcast.
+			.add( dispatcher => {
+				dispatcher.on( 'element:figure', converter );
+
+				function converter( evt, data, conversionApi ) {
+					if ( !conversionApi.consumable.test( data.viewItem, { name: true, classes: 'media' } ) ) {
+						return;
+					}
+
+					const { modelRange, modelCursor } = conversionApi.convertChildren( data.viewItem, data.modelCursor );
+
+					data.modelRange = modelRange;
+					data.modelCursor = modelCursor;
+
+					const modelElement = first( modelRange.getItems() );
+
+					if ( !modelElement ) {
+						return;
+					}
+
+					conversionApi.consumable.consume( data.viewItem, { name: true, classes: 'media' } );
 				}
 			} );
 	}
